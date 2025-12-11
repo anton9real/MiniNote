@@ -1,0 +1,35 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v1
+        
+      - name: Build App
+        run: |
+          # 1. Build the app for iOS Device (arm64)
+          swift build -c release --arch arm64 --product MiniNote -Xswiftc -sdk -Xswiftc $(xcrun --sdk iphoneos --show-sdk-path) -Xswiftc -target -Xswiftc arm64-apple-ios16.0
+          
+          # 2. Create the IPA structure
+          mkdir -p Payload/MiniNote.app
+          cp -r .build/arm64-apple-ios/release/MiniNote.product/MiniNote.app/* Payload/MiniNote.app/
+          
+          # 3. Zip it into an IPA
+          zip -r MiniNote.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: MiniNote-IPA
+          path: MiniNote.ipa
